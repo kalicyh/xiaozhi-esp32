@@ -12,6 +12,7 @@ set(SOURCES "audio_codecs/audio_codec.cc"
             "protocols/protocol.cc"
             "iot/thing.cc"
             "iot/thing_manager.cc"
+            "motor/sg90_servo.cc"
             "system_info.cc"
             "application.cc"
             "ota.cc"
@@ -134,6 +135,8 @@ elseif(CONFIG_BOARD_TYPE_SENSECAP_WATCHER)
     set(BOARD_TYPE "sensecap-watcher")
 elseif(CONFIG_BOARD_TYPE_ESP32_CGC)
     set(BOARD_TYPE "esp32-cgc")  
+elseif(CONFIG_BOARD_TYPE_KALICYH_C3)
+    set(BOARD_TYPE "kalicyh-c3")
 endif()
 file(GLOB BOARD_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/boards/${BOARD_TYPE}/*.cc
