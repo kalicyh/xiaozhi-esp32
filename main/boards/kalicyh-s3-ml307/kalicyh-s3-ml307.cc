@@ -8,6 +8,8 @@
 #include "led/single_led.h"
 #include "wifi_board.h"
 #include "assets/lang_config.h"
+#include "device_state.h"
+#include <string>
 
 #include <wifi_station.h>
 #include <esp_log.h>
@@ -146,7 +148,7 @@ private:
         boot_button_.OnDoubleClick([this]() {
             ESP_LOGI(TAG, "Button OnDoubleClick");
             auto& app = Application::GetInstance();
-            if (app.GetDeviceState() == kDeviceStateStarting || app.GetDeviceState() == kDeviceStateWifiConfiguring) {
+            if (app.GetDeviceState() == kDeviceStateStarting || app.GetDeviceState() == kDeviceStateWifiConfiguring || app.GetDeviceState() == kDeviceStateIdle) {
                 SwitchNetworkType();
             }
         });
