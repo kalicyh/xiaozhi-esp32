@@ -128,6 +128,9 @@ choice BOARD_TYPE
     config BOARD_TYPE_KALICYH_S3_ML307
         bool "KALICYH S3 ML307"
         depends on IDF_TARGET_ESP32S3
+    config BOARD_TYPE_KALICYH_S3_AEC_ML307
+        bool "KALICYH S3 AEC ML307"
+        depends on IDF_TARGET_ESP32S3
     config BOARD_TYPE_BREAD_COMPACT_WIFI
         bool "Bread Compact WiFi (面包板)"
         depends on IDF_TARGET_ESP32S3
