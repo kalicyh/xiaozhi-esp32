@@ -46,4 +46,6 @@
 #define ML307_TX_PIN GPIO_NUM_39
 #define ML307_RX_PIN GPIO_NUM_38
 
+#define BUILTIN_LED_GPIO        GPIO_NUM_2
+
 #endif // _BOARD_CONFIG_H_

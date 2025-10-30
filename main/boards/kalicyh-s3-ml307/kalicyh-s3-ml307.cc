@@ -5,6 +5,7 @@
 #include "button.h"
 #include "config.h"
 #include "power_save_timer.h"
+#include "adc_battery_monitor.h"
 #include "led/single_led.h"
 #include "wifi_board.h"
 #include "assets/lang_config.h"
@@ -49,6 +50,18 @@ private:
     Button boot_button_;
     Display* display_;
     PowerSaveTimer* power_save_timer_;
+    AdcBatteryMonitor* adc_battery_monitor_ = nullptr;
+
+    void InitializePowerManager() {
+        adc_battery_monitor_ = new AdcBatteryMonitor(ADC_UNIT_1, ADC_CHANNEL_7, 100000, 100000, GPIO_NUM_46);
+        adc_battery_monitor_->OnChargingStatusChanged([this](bool is_charging) {
+            if (is_charging) {
+                power_save_timer_->SetEnabled(false);
+            } else {
+                power_save_timer_->SetEnabled(true);
+            }
+        });
+    }
 
     void InitializePowerSaveTimer() {
         power_save_timer_ = new PowerSaveTimer(-1, 60, 600);
@@ -157,6 +170,7 @@ private:
 public:
     KalicyhS3ML307() : DualNetworkBoard(ML307_TX_PIN, ML307_RX_PIN, GPIO_NUM_NC),
         boot_button_(BOOT_BUTTON_GPIO) {  
+        InitializePowerManager();
         InitializeCodecI2c();
         InitializeSpi();
         InitializeGc9a01Display();
@@ -183,6 +197,13 @@ public:
             AUDIO_I2S_GPIO_MCLK, AUDIO_I2S_GPIO_BCLK, AUDIO_I2S_GPIO_WS, AUDIO_I2S_GPIO_DOUT, AUDIO_I2S_GPIO_DIN,
             AUDIO_CODEC_PA_PIN, AUDIO_CODEC_ES8311_ADDR);
         return &audio_codec;
+    }
+
+    virtual bool GetBatteryLevel(int& level, bool& charging, bool& discharging) override {
+        charging = adc_battery_monitor_->IsCharging();
+        discharging = adc_battery_monitor_->IsDischarging();
+        level = adc_battery_monitor_->GetBatteryLevel();
+        return true;
     }
 
     // 重写 DualNetworkBoard 的方法，代理到当前活动的板子
