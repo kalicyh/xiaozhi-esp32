@@ -244,9 +244,11 @@ bool Assets::Apply() {
     auto display = Board::GetInstance().GetDisplay();
     ESP_LOGI(TAG, "Refreshing display theme...");
 
-    auto current_theme = display->GetTheme();
-    if (current_theme != nullptr) {
-        display->SetTheme(current_theme);
+    if (display != nullptr) {
+        auto current_theme = display->GetTheme();
+        if (current_theme != nullptr) {
+            display->SetTheme(current_theme);
+        }
     }
 #elif defined(CONFIG_USE_EMOTE_MESSAGE_STYLE)
     auto &board = Board::GetInstance();
