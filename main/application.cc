@@ -19,6 +19,15 @@
 
 #define TAG "Application"
 
+// Macro to safely call display methods
+#define SAFE_DISPLAY_CALL(method, ...) \
+    do { \
+        auto display = Board::GetInstance().GetDisplay(); \
+        if (display != nullptr) { \
+            display->method(__VA_ARGS__); \
+        } \
+    } while(0)
+
 
 Application::Application() {
     event_group_ = xEventGroupCreate();
@@ -369,11 +378,16 @@ void Application::CheckAssetsVersion() {
         display->SetChatMessage("system", Lang::Strings::PLEASE_WAIT);
 
         bool success = assets.Download(download_url, [display](int progress, size_t speed) -> void {
-            std::thread([display, progress, speed]() {
-                char buffer[32];
-                snprintf(buffer, sizeof(buffer), "%d%% %uKB/s", progress, speed / 1024);
-                display->SetChatMessage("system", buffer);
-            }).detach();
+            if (display != nullptr) {
+                std::thread([progress, speed]() {
+                    char buffer[32];
+                    snprintf(buffer, sizeof(buffer), "%d%% %uKB/s", progress, speed / 1024);
+                    auto display = Board::GetInstance().GetDisplay();
+                    if (display != nullptr) {
+                        display->SetChatMessage("system", buffer);
+                    }
+                }).detach();
+            }
         });
 
         board.SetPowerSaveLevel(PowerSaveLevel::LOW_POWER);
@@ -389,8 +403,10 @@ void Application::CheckAssetsVersion() {
 
     // Apply assets
     assets.Apply();
-    display->SetChatMessage("system", "");
-    display->SetEmotion("microchip_ai");
+    if (display != nullptr) {
+        display->SetChatMessage("system", "");
+        display->SetEmotion("microchip_ai");
+    }
 }
 
 void Application::CheckNewVersion() {
@@ -401,7 +417,9 @@ void Application::CheckNewVersion() {
     auto& board = Board::GetInstance();
     while (true) {
         auto display = board.GetDisplay();
-        display->SetStatus(Lang::Strings::CHECKING_NEW_VERSION);
+        if (display != nullptr) {
+            display->SetStatus(Lang::Strings::CHECKING_NEW_VERSION);
+        }
 
         esp_err_t err = ota_->CheckVersion();
         if (err != ESP_OK) {
@@ -444,7 +462,9 @@ void Application::CheckNewVersion() {
             break;
         }
 
-        display->SetStatus(Lang::Strings::ACTIVATION);
+        if (display != nullptr) {
+            display->SetStatus(Lang::Strings::ACTIVATION);
+        }
         // Activation code is shown to the user and waiting for the user to input
         if (ota_->HasActivationCode()) {
             ShowActivationCode(ota_->GetActivationCode(), ota_->GetActivationMessage());
@@ -511,7 +531,9 @@ void Application::InitializeProtocol() {
         board.SetPowerSaveLevel(PowerSaveLevel::LOW_POWER);
         Schedule([this]() {
             auto display = Board::GetInstance().GetDisplay();
-            display->SetChatMessage("system", "");
+            if (display != nullptr) {
+                display->SetChatMessage("system", "");
+            }
             SetDeviceState(kDeviceStateIdle);
         });
     });
@@ -592,8 +614,11 @@ void Application::InitializeProtocol() {
             auto payload = cJSON_GetObjectItem(root, "payload");
             ESP_LOGI(TAG, "Received custom message: %s", cJSON_PrintUnformatted(root));
             if (cJSON_IsObject(payload)) {
-                Schedule([this, display, payload_str = std::string(cJSON_PrintUnformatted(payload))]() {
-                    display->SetChatMessage("system", payload_str.c_str());
+                Schedule([this, payload_str = std::string(cJSON_PrintUnformatted(payload))]() {
+                    auto display = Board::GetInstance().GetDisplay();
+                    if (display != nullptr) {
+                        display->SetChatMessage("system", payload_str.c_str());
+                    }
                 });
             } else {
                 ESP_LOGW(TAG, "Invalid custom message format: missing payload");
@@ -807,19 +832,25 @@ void Application::HandleStateChangedEvent() {
     switch (new_state) {
         case kDeviceStateUnknown:
         case kDeviceStateIdle:
-            display->SetStatus(Lang::Strings::STANDBY);
-            display->SetEmotion("neutral");
+            if (display != nullptr) {
+                display->SetStatus(Lang::Strings::STANDBY);
+                display->SetEmotion("neutral");
+            }
             audio_service_.EnableVoiceProcessing(false);
             audio_service_.EnableWakeWordDetection(true);
             break;
         case kDeviceStateConnecting:
-            display->SetStatus(Lang::Strings::CONNECTING);
-            display->SetEmotion("neutral");
-            display->SetChatMessage("system", "");
+            if (display != nullptr) {
+                display->SetStatus(Lang::Strings::CONNECTING);
+                display->SetEmotion("neutral");
+                display->SetChatMessage("system", "");
+            }
             break;
         case kDeviceStateListening:
-            display->SetStatus(Lang::Strings::LISTENING);
-            display->SetEmotion("neutral");
+            if (display != nullptr) {
+                display->SetStatus(Lang::Strings::LISTENING);
+                display->SetEmotion("neutral");
+            }
 
             // Make sure the audio processor is running
             if (!audio_service_.IsAudioProcessorRunning()) {
@@ -836,7 +867,9 @@ void Application::HandleStateChangedEvent() {
             }
             break;
         case kDeviceStateSpeaking:
-            display->SetStatus(Lang::Strings::SPEAKING);
+            if (display != nullptr) {
+                display->SetStatus(Lang::Strings::SPEAKING);
+            }
 
             if (listening_mode_ != kListeningModeRealtime) {
                 audio_service_.EnableVoiceProcessing(false);
@@ -909,7 +942,9 @@ bool Application::UpgradeFirmware(const std::string& url, const std::string& ver
     SetDeviceState(kDeviceStateUpgrading);
 
     std::string message = std::string(Lang::Strings::NEW_VERSION) + version_info;
-    display->SetChatMessage("system", message.c_str());
+    if (display != nullptr) {
+        display->SetChatMessage("system", message.c_str());
+    }
 
     board.SetPowerSaveLevel(PowerSaveLevel::PERFORMANCE);
     audio_service_.Stop();
@@ -934,8 +969,10 @@ bool Application::UpgradeFirmware(const std::string& url, const std::string& ver
     } else {
         // Upgrade success, reboot immediately
         ESP_LOGI(TAG, "Firmware upgrade successful, rebooting...");
-        display->SetChatMessage("system", "Upgrade successful, rebooting...");
-        vTaskDelay(pdMS_TO_TICKS(1000)); // Brief pause to show message
+        if (display != nullptr) {
+            display->SetChatMessage("system", "Upgrade successful, rebooting...");
+            vTaskDelay(pdMS_TO_TICKS(1000)); // Brief pause to show message
+        }
         Reboot();
         return true;
     }
@@ -1021,15 +1058,21 @@ void Application::SetAecMode(AecMode mode) {
         switch (aec_mode_) {
         case kAecOff:
             audio_service_.EnableDeviceAec(false);
-            display->ShowNotification(Lang::Strings::RTC_MODE_OFF);
+            if (display != nullptr) {
+                display->ShowNotification(Lang::Strings::RTC_MODE_OFF);
+            }
             break;
         case kAecOnServerSide:
             audio_service_.EnableDeviceAec(false);
-            display->ShowNotification(Lang::Strings::RTC_MODE_ON);
+            if (display != nullptr) {
+                display->ShowNotification(Lang::Strings::RTC_MODE_ON);
+            }
             break;
         case kAecOnDeviceSide:
             audio_service_.EnableDeviceAec(true);
-            display->ShowNotification(Lang::Strings::RTC_MODE_ON);
+            if (display != nullptr) {
+                display->ShowNotification(Lang::Strings::RTC_MODE_ON);
+            }
             break;
         }
 

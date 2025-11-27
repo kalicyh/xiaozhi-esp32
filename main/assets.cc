@@ -334,9 +334,11 @@ bool Assets::LvglStrategy::Apply(Assets* assets) {
     auto display = Board::GetInstance().GetDisplay();
     ESP_LOGI(TAG, "Refreshing display theme...");
 
-    auto current_theme = display->GetTheme();
-    if (current_theme != nullptr) {
-        display->SetTheme(current_theme);
+    if (display != nullptr) {
+        auto current_theme = display->GetTheme();
+        if (current_theme != nullptr) {
+            display->SetTheme(current_theme);
+        }
     }
 
     // Parse hide_subtitle configuration

@@ -63,11 +63,13 @@ std::string DualNetworkBoard::GetBoardType() {
 
 void DualNetworkBoard::StartNetwork() {
     auto display = Board::GetInstance().GetDisplay();
-    
-    if (network_type_ == NetworkType::WIFI) {
-        display->SetStatus(Lang::Strings::CONNECTING);
-    } else {
-        display->SetStatus(Lang::Strings::DETECTING_MODULE);
+
+    if (display != nullptr) {
+        if (network_type_ == NetworkType::WIFI) {
+            display->SetStatus(Lang::Strings::CONNECTING);
+        } else {
+            display->SetStatus(Lang::Strings::DETECTING_MODULE);
+        }
     }
     current_board_->StartNetwork();
 }
