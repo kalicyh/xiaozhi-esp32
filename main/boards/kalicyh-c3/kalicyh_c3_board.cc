@@ -25,9 +25,9 @@
 class KalicyhC3 : public WifiBoard {
 private:
     i2c_master_bus_handle_t codec_i2c_bus_;
-    LcdDisplay* display_;
-    Button boot_button_;
-    Button asr_button_;
+    LcdDisplay* display_ = nullptr;
+    Button boot_button_ = nullptr;
+    Button asr_button_ = nullptr;
     PowerSaveTimer* power_save_timer_ = nullptr;
     PressToTalkMcpTool* press_to_talk_tool_ = nullptr;
 
@@ -119,12 +119,13 @@ private:
     void InitializeButtons() {
         boot_button_.OnClick([this]() {
             auto& app = Application::GetInstance();
-            if (app.GetDeviceState() == kDeviceStateStarting && !WifiStation::GetInstance().IsConnected()) {
-                ResetWifiConfiguration();
+            if (app.GetDeviceState() == kDeviceStateStarting) {
+                EnterWifiConfigMode();
+                return;
             }
             if (!press_to_talk_tool_ || !press_to_talk_tool_->IsPressToTalkEnabled()) {
-            app.ToggleChatState();
-        }
+                app.ToggleChatState();
+            }
         });
         boot_button_.OnPressDown([this]() {
             if (power_save_timer_) {
@@ -141,10 +142,11 @@ private:
             });
 
         boot_button_.OnMultipleClick([this]() {
-            ResetWifiConfiguration();
+            EnterWifiConfigMode();
         }, 3);
 
         asr_button_.OnClick([this]() {
+            power_save_timer_->WakeUp();
             std::string wake_word="你好小智";
             Application::GetInstance().WakeWordInvoke(wake_word);
         });
@@ -186,12 +188,11 @@ public:
             AUDIO_CODEC_PA_PIN, AUDIO_CODEC_ES8311_ADDR);
         return &audio_codec;
     }
-
-    virtual void SetPowerSaveMode(bool enabled) override {
-        if (!enabled) {
+    virtual void SetPowerSaveLevel(PowerSaveLevel level) override {
+        if (level != PowerSaveLevel::LOW_POWER) {
             power_save_timer_->WakeUp();
         }
-        WifiBoard::SetPowerSaveMode(enabled);
+        WifiBoard::SetPowerSaveLevel(level);
     }
 };
 

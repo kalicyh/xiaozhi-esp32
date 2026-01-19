@@ -40,12 +40,6 @@ private:
 
     void InitializePowerSaveTimer() {
         power_save_timer_ = new PowerSaveTimer(-1, 60, 600);
-        power_save_timer_->OnEnterSleepMode([this]() {
-        });
-        power_save_timer_->OnExitSleepMode([this]() {
-        });
-        power_save_timer_->OnShutdownRequest([this]() {
-        });
         power_save_timer_->SetEnabled(true);
     }
 
@@ -70,10 +64,10 @@ private:
         boot_button_.OnClick([this]() {
             auto& app = Application::GetInstance();
             if (GetNetworkType() == NetworkType::WIFI) {
-                if (app.GetDeviceState() == kDeviceStateStarting && !WifiStation::GetInstance().IsConnected()) {
+                if (app.GetDeviceState() == kDeviceStateStarting) {
                     // cast to WifiBoard
                     auto& wifi_board = static_cast<WifiBoard&>(GetCurrentBoard());
-                    wifi_board.ResetWifiConfiguration();
+                    wifi_board.EnterWifiConfigMode();
                 }
             }
             app.ToggleChatState();
@@ -136,8 +130,11 @@ public:
         return DualNetworkBoard::GetNetworkStateIcon();
     }
 
-    virtual void SetPowerSaveMode(bool enabled) override {
-        DualNetworkBoard::SetPowerSaveMode(enabled);
+    virtual void SetPowerSaveLevel(PowerSaveLevel level) override {
+        if (level != PowerSaveLevel::LOW_POWER) {
+            power_save_timer_->WakeUp();
+        }
+        DualNetworkBoard::SetPowerSaveLevel(level);
     }
 
     virtual std::string GetBoardJson() override {
