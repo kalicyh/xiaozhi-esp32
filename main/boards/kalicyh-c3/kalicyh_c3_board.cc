@@ -10,6 +10,7 @@
 #include "config.h"
 #include "power_save_timer.h"
 #include "press_to_talk_mcp_tool.h"
+#include "servo_mcp_tool.h"
 
 #include <wifi_station.h>
 #include <esp_log.h>
@@ -30,6 +31,7 @@ private:
     Button asr_button_ = nullptr;
     PowerSaveTimer* power_save_timer_ = nullptr;
     PressToTalkMcpTool* press_to_talk_tool_ = nullptr;
+    ServoMcpTool* servo_tool_ = nullptr;
 
     void InitializeI2c() {
         // Initialize I2C peripheral
@@ -157,6 +159,10 @@ private:
     void InitializeTools() {
         press_to_talk_tool_ = new PressToTalkMcpTool();
         press_to_talk_tool_->Initialize();
+
+        // 初始化舵机 MCP 控制
+        servo_tool_ = new ServoMcpTool(SERVO_MOTOR_GPIO);
+        servo_tool_->Initialize();
     }
 
 public:
@@ -167,10 +173,11 @@ public:
         InitializeSt7789Display();
         InitializeButtons();
         InitializePowerSaveTimer();
-        InitializeTools();
         // 把 ESP32C3 的 VDD SPI 引脚作为普通 GPIO 口使用
         esp_efuse_write_field_bit(ESP_EFUSE_VDD_SPI_AS_GPIO);
+        // 先初始化背光（使用 LEDC TIMER_0），再初始化舵机，避免时钟冲突
         GetBacklight()->SetBrightness(100);
+        InitializeTools();
     }
 
     virtual Display* GetDisplay() override {
