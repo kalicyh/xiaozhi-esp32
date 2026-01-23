@@ -18,6 +18,8 @@
 
 #include "driver/gpio.h"
 
+#include "display/display.h"
+
 #define TAG "KalicyhS3ML307"
 
 class KalicyhS3ML307 : public DualNetworkBoard {
@@ -26,6 +28,7 @@ private:
     Button boot_button_;
     PowerSaveTimer* power_save_timer_;
     AdcBatteryMonitor* adc_battery_monitor_ = nullptr;
+    NoDisplay no_display_;
 
     void InitializePowerManager() {
         adc_battery_monitor_ = new AdcBatteryMonitor(ADC_UNIT_1, ADC_CHANNEL_7, 100000, 100000, GPIO_NUM_46);
@@ -96,7 +99,7 @@ public:
     }
 
     virtual Display* GetDisplay() override {
-        return nullptr;  // 不使用屏幕
+        return &no_display_;
     }
 
     virtual Backlight* GetBacklight() override {
